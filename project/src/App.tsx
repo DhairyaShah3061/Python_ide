@@ -1,88 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Split from 'react-split';
-import { Editor as MonacoEditor } from '@monaco-editor/react';
-import { Play, Terminal, FileText, Settings, Info } from 'lucide-react';
+import { Play, Terminal, FileText, Settings } from 'lucide-react';
+import { Editor } from './components/Editor';
+import { Console } from './components/Console';
+import { AdminPage } from './pages/AdminPage';
+import { Problem } from './types';
+import { initializeSkulpt, runPython } from './utils/skulpt';
 
-const INITIAL_CODE = `# Write your Python code here\ndef hello():\n    print('Hello, World!')\n\nhello()`;
+const DEFAULT_PROBLEM: Problem = {
+  id: '1',
+  title: 'Print Hello World',
+  description: 'Write a function that prints "Hello, World!" to the console.',
+  initialCode: '# Write your Python code here\ndef hello():\n    print("Hello, World!")\n\nhello()',
+  testCases: [
+    {
+      input: '',
+      expectedOutput: 'Hello, World!\n'
+    }
+  ]
+};
 
-function Editor({ code, onChange }) {
-  return (
-    <div style={{ flexGrow: 1, borderBottom: '2px solid #33ff33' }}>
-      <MonacoEditor
-        height="100%"
-        language="python"
-        theme="vs-dark"
-        value={code}
-        onChange={onChange}
-        options={{
-          minimap: { enabled: false },
-          fontSize: 14,
-          lineNumbers: 'on',
-          automaticLayout: true,
-          fontFamily: 'Press Start 2P',
-        }}
-      />
-    </div>
-  );
-}
-
-function ProblemStatement() {
-  return (
-    <div style={{ background: '#111', borderRight: '2px solid #33ff33', padding: '16px', overflowY: 'auto' }}>
-      <div style={{ borderBottom: '2px solid #33ff33', paddingBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <FileText />
-        <h2>Problem Statement</h2>
-      </div>
-      <h1>Print Hello World</h1>
-      <p>Write a function that prints "Hello, World!" to the console.</p>
-      <h2>Example</h2>
-      <div style={{ background: 'black', color: '#33ff33', border: '2px solid #33ff33', padding: '10px' }}>
-        <p><strong>Input:</strong> None</p>
-        <p><strong>Output:</strong> Hello, World!</p>
-      </div>
-    </div>
-  );
-}
-
-function Console({ output }) {
-  return (
-    <div style={{ background: 'black', borderTop: '2px solid #33ff33', padding: '10px' }}>
-      <div style={{ borderBottom: '2px solid #33ff33', paddingBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Terminal />
-        <h3>Console Output</h3>
-      </div>
-      <pre style={{ whiteSpace: 'pre-wrap', padding: '10px' }}>{output || 'No output yet...'}</pre>
-    </div>
-  );
-}
-
-function App() {
-  const [code, setCode] = useState(INITIAL_CODE);
+function IDE() {
+  const [problem, setProblem] = useState<Problem>(DEFAULT_PROBLEM);
+  const [code, setCode] = useState(DEFAULT_PROBLEM.initialCode);
   const [output, setOutput] = useState('');
 
-  const handleRunCode = () => {
-    setOutput("Hello, World!\n(This is a simulated output)");
+  useEffect(() => {
+    initializeSkulpt();
+    const savedProblem = localStorage.getItem('currentProblem');
+    if (savedProblem) {
+      const parsed = JSON.parse(savedProblem);
+      setProblem(parsed);
+      setCode(parsed.initialCode);
+    }
+  }, []);
+
+  const handleRunCode = async () => {
+    const result = await runPython(code);
+    setOutput(result);
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'black', color: '#33ff33' }}>
-      <header style={{ background: '#111', borderBottom: '2px solid #33ff33', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="flex flex-col h-screen bg-black text-[#33ff33]">
+      <header className="bg-[#111] border-b-2 border-[#33ff33] p-4 flex justify-between items-center">
         <h1>Python Retro IDE</h1>
-        <div>
-          <button style={{ background: 'transparent', border: 'none', color: '#33ff33', marginRight: '10px' }}>
+        <div className="flex items-center gap-4">
+          <Link to="/admin" className="text-[#33ff33]">
             <Settings />
-          </button>
-          <button style={{ background: 'transparent', border: 'none', color: '#33ff33', marginRight: '10px' }}>
-            <Info />
-          </button>
-          <button onClick={handleRunCode} style={{ background: '#33ff33', color: 'black', fontFamily: 'Press Start 2P', border: '2px solid #111', padding: '8px 12px', cursor: 'pointer' }}>
-            <Play /> Run Code
+          </Link>
+          <button
+            onClick={handleRunCode}
+            className="retro-button px-4 py-2 flex items-center gap-2"
+          >
+            <Play size={20} /> Run Code
           </button>
         </div>
       </header>
-      <Split sizes={[50, 50]} minSize={300} gutterSize={8} style={{ display: 'flex', height: 'calc(100vh - 50px)' }}>
-        <ProblemStatement />
-        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+      
+      <Split sizes={[50, 50]} minSize={300} gutterSize={8} className="flex h-[calc(100vh-64px)]">
+        <div className="bg-[#111] border-r-2 border-[#33ff33] p-4 overflow-y-auto">
+          <div className="border-b-2 border-[#33ff33] pb-2 flex items-center gap-2 mb-4">
+            <FileText />
+            <h2>Problem Statement</h2>
+          </div>
+          <h1 className="text-xl mb-4">{problem.title}</h1>
+          <p className="mb-4">{problem.description}</p>
+          <h2 className="text-lg mb-2">Example</h2>
+          <div className="bg-black text-[#33ff33] border-2 border-[#33ff33] p-4">
+            <p><strong>Input:</strong> {problem.testCases[0].input || 'None'}</p>
+            <p><strong>Output:</strong> {problem.testCases[0].expectedOutput}</p>
+          </div>
+        </div>
+        
+        <div className="flex flex-col w-full">
           <Editor code={code} onChange={(value) => setCode(value || '')} />
           <Console output={output} />
         </div>
@@ -91,4 +82,13 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<IDE />} />
+        <Route path="/admin" element={<AdminPage />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}

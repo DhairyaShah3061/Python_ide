@@ -73,3 +73,18 @@ body {
 .gutter:hover {
   background-color: #22dd22;
 }
+
+/* Read-only line styling */
+.read-only-line {
+  background-color: rgba(51, 255, 51, 0.1);
+  border-left: 2px solid #33ff33;
+}
+
+/* Monaco editor modifications */
+.monaco-editor .margin {
+  background-color: #111 !important;
+}
+
+.monaco-editor .line-numbers {
+  color: #33ff33 !important;
+}
